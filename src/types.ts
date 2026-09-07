@@ -422,4 +422,39 @@ export interface ComplaintAIAnalysisResponse {
   error?: string;
 }
 
+// Phase 7B AI Duplicate Complaint Detection
+export interface DuplicateMatchItem {
+  complaintId: string;
+  ticketId: string;
+  title: string;
+  category: ComplaintCategory;
+  status: ComplaintStatus;
+  location: {
+    building: string;
+    floor: string;
+    room: string;
+  };
+  shortDescription: string;
+  reason: string;
+  confidence: number;
+}
+
+export interface DuplicateDetectionResult {
+  hasDuplicate: boolean;
+  confidence: number;
+  matches: DuplicateMatchItem[];
+  candidateCount?: number;
+}
+
+export interface DuplicateDetectionResponse {
+  success: boolean;
+  hasDuplicate?: boolean;
+  confidence?: number;
+  matches?: DuplicateMatchItem[];
+  data?: DuplicateDetectionResult;
+  message?: string;
+  error?: string;
+}
+
+
 

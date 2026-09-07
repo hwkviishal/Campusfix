@@ -12,6 +12,7 @@ import {
   CreateComplaintInput,
   UpdateComplaintInput,
   ComplaintAIAnalysisResponse,
+  DuplicateDetectionResponse,
 } from '../types';
 
 export const apiClient = axios.create({
@@ -331,6 +332,22 @@ export const apiService = {
   }): Promise<ComplaintAIAnalysisResponse> => {
     const response = await apiClient.post<ComplaintAIAnalysisResponse>(
       '/ai/analyze-complaint',
+      payload
+    );
+    return response.data;
+  },
+
+  // Phase 7B AI Duplicate Complaint Detection
+  checkDuplicateWithAI: async (payload: {
+    title?: string;
+    description: string;
+    category?: string;
+    building?: string;
+    floor?: string;
+    room?: string;
+  }): Promise<DuplicateDetectionResponse> => {
+    const response = await apiClient.post<DuplicateDetectionResponse>(
+      '/ai/check-duplicate',
       payload
     );
     return response.data;
