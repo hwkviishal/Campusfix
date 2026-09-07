@@ -11,6 +11,7 @@ import {
   SingleComplaintResponse,
   CreateComplaintInput,
   UpdateComplaintInput,
+  ComplaintAIAnalysisResponse,
 } from '../types';
 
 export const apiClient = axios.create({
@@ -317,6 +318,20 @@ export const apiService = {
     const response = await apiClient.patch<SingleComplaintResponse>(
       `/admin/complaints/${complaintId}/status`,
       { status, comment }
+    );
+    return response.data;
+  },
+
+  // Phase 7A AI Complaint Intelligence
+  analyzeComplaintWithAI: async (payload: {
+    description: string;
+    building?: string;
+    floor?: string;
+    room?: string;
+  }): Promise<ComplaintAIAnalysisResponse> => {
+    const response = await apiClient.post<ComplaintAIAnalysisResponse>(
+      '/ai/analyze-complaint',
+      payload
     );
     return response.data;
   },

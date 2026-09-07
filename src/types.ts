@@ -405,3 +405,21 @@ export interface CommentsResponse {
   };
 }
 
+// Phase 7A AI Complaint Intelligence
+export interface ComplaintAIAnalysis {
+  suggestedTitle: string;
+  category: ComplaintCategory;
+  priority: ComplaintPriority;
+  departmentCode: string;
+  summary: string;
+  suggestedAction: string;
+}
+
+export interface ComplaintAIAnalysisResponse {
+  success: boolean;
+  message?: string;
+  data?: ComplaintAIAnalysis;
+  error?: string;
+}
+
+

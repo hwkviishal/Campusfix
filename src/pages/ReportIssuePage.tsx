@@ -6,6 +6,7 @@ import {
   ComplaintCategory,
   ComplaintPriority,
   CreateComplaintInput,
+  ComplaintAIAnalysis,
 } from '../types';
 import {
   ArrowLeft,
@@ -18,6 +19,10 @@ import {
   MapPin,
   Sparkles,
   UploadCloud,
+  Check,
+  X,
+  Wrench,
+  Bot,
 } from 'lucide-react';
 import { CategoryBadge, PriorityBadge } from '../components/ComplaintBadges';
 import { ImageDropzone, SelectedImageFile } from '../components/ImageDropzone';
@@ -55,6 +60,14 @@ const COMMON_BUILDINGS = [
   'Sports Complex',
 ];
 
+const DEPARTMENT_LABELS: Record<string, string> = {
+  ELEC: 'Electrical Maintenance',
+  PLUMB: 'Plumbing & Water Systems',
+  'IT-NET': 'IT & Network Infrastructure',
+  FACIL: 'Campus Facilities & Operations',
+  HOUSE: 'General Housekeeping',
+};
+
 export const ReportIssuePage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -73,9 +86,82 @@ export const ReportIssuePage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isCloudinaryConfigured, setIsCloudinaryConfigured] = useState<boolean>(true);
 
+  // Phase 7A AI States
+  const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
+  const [aiRecommendation, setAiRecommendation] = useState<ComplaintAIAnalysis | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiAppliedFeedback, setAiAppliedFeedback] = useState<string | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // AI Analysis Handler
+  const handleAnalyzeAI = async () => {
+    setAiError(null);
+    setAiAppliedFeedback(null);
+
+    const trimmed = formData.description.trim();
+    if (trimmed.length < 10) {
+      setAiError('Please provide at least 10 characters in the description before requesting AI analysis.');
+      return;
+    }
+
+    try {
+      setIsAnalyzingAI(true);
+      const res = await apiService.analyzeComplaintWithAI({
+        description: trimmed,
+        building: formData.building.trim() || undefined,
+        floor: formData.floor.trim() || undefined,
+        room: formData.room.trim() || undefined,
+      });
+
+      if (res?.success && res.data) {
+        setAiRecommendation(res.data);
+      } else {
+        setAiError(
+          res?.message ||
+            'AI analysis is temporarily unavailable. You can continue submitting your complaint manually.'
+        );
+      }
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        'AI analysis is temporarily unavailable. Please continue filling out the complaint manually.';
+      setAiError(message);
+    } finally {
+      setIsAnalyzingAI(false);
+    }
+  };
+
+  const applyAllRecommendations = () => {
+    if (!aiRecommendation) return;
+    setFormData((prev) => ({
+      ...prev,
+      title: aiRecommendation.suggestedTitle || prev.title,
+      category: aiRecommendation.category || prev.category,
+      priority: aiRecommendation.priority || prev.priority,
+    }));
+    setAiAppliedFeedback('AI recommendations applied to form! You can further adjust any field below.');
+  };
+
+  const applyTitle = () => {
+    if (!aiRecommendation) return;
+    setFormData((prev) => ({ ...prev, title: aiRecommendation.suggestedTitle }));
+    setAiAppliedFeedback('Suggested title applied.');
+  };
+
+  const applyCategory = () => {
+    if (!aiRecommendation) return;
+    setFormData((prev) => ({ ...prev, category: aiRecommendation.category }));
+    setAiAppliedFeedback('Suggested category applied.');
+  };
+
+  const applyPriority = () => {
+    if (!aiRecommendation) return;
+    setFormData((prev) => ({ ...prev, priority: aiRecommendation.priority }));
+    setAiAppliedFeedback('Suggested priority applied.');
+  };
 
   useEffect(() => {
     apiService
@@ -390,9 +476,235 @@ export const ReportIssuePage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400"
               />
-              <p className="text-[11px] text-slate-400 mt-1">
-                Minimum 10 characters. Please be descriptive so the maintenance department brings proper tools.
-              </p>
+
+              {/* AI Analysis Action Bar */}
+              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2.5">
+                <p className="text-[11px] text-slate-400">
+                  Minimum 10 characters. Please be descriptive so the maintenance department brings proper tools.
+                </p>
+
+                <button
+                  type="button"
+                  id="btn-analyze-ai"
+                  onClick={handleAnalyzeAI}
+                  disabled={isAnalyzingAI || formData.description.trim().length < 10}
+                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-xs ${
+                    isAnalyzingAI
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-wait'
+                      : formData.description.trim().length >= 10
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 cursor-pointer shadow-blue-500/20'
+                      : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                  }`}
+                  title={
+                    formData.description.trim().length < 10
+                      ? 'Enter at least 10 characters in description to analyze'
+                      : 'Analyze complaint using Gemini AI'
+                  }
+                >
+                  {isAnalyzingAI ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                      <span>Analyzing with AI...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>✨ Analyze with AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* AI Applied Feedback Notice */}
+              {aiAppliedFeedback && (
+                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs text-emerald-800">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-medium">{aiAppliedFeedback}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAiAppliedFeedback(null)}
+                    className="text-emerald-700 hover:text-emerald-900 p-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* AI Error Alert (Non-blocking) */}
+              {aiError && (
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start justify-between text-xs text-amber-900">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold">AI Assistant Notice:</span> {aiError}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAiError(null)}
+                    className="text-amber-700 hover:text-amber-900 p-1 shrink-0 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* AI Recommendation Card */}
+              {aiRecommendation && (
+                <div
+                  id="ai-recommendation-card"
+                  className="mt-4 p-5 rounded-xl bg-gradient-to-b from-indigo-50/50 to-slate-50 border border-indigo-200/80 shadow-xs space-y-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-950">
+                            AI Recommendation
+                          </h4>
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 rounded-md">
+                            Gemini 3.8 Flash
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Review suggested triage and actions below. You can apply all or individual recommendations.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAiRecommendation(null)}
+                      className="text-slate-400 hover:text-slate-600 p-1 rounded-md cursor-pointer"
+                      title="Dismiss recommendation"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {/* Suggested Title */}
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg sm:col-span-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Suggested Title
+                        </span>
+                        <button
+                          type="button"
+                          onClick={applyTitle}
+                          className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
+                        >
+                          Use this title
+                        </button>
+                      </div>
+                      <p className="font-semibold text-slate-800 text-sm">
+                        {aiRecommendation.suggestedTitle}
+                      </p>
+                    </div>
+
+                    {/* Suggested Category */}
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Recommended Category
+                        </span>
+                        <button
+                          type="button"
+                          onClick={applyCategory}
+                          className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CategoryBadge category={aiRecommendation.category} size="sm" />
+                      </div>
+                    </div>
+
+                    {/* Suggested Priority */}
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Assessed Urgency
+                        </span>
+                        <button
+                          type="button"
+                          onClick={applyPriority}
+                          className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <PriorityBadge priority={aiRecommendation.priority} size="sm" />
+                      </div>
+                    </div>
+
+                    {/* Responsible Department */}
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Responsible Department
+                      </span>
+                      <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+                        <Building className="w-3.5 h-3.5 text-slate-500" />
+                        <span>
+                          {DEPARTMENT_LABELS[aiRecommendation.departmentCode] ||
+                            aiRecommendation.departmentCode}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          ({aiRecommendation.departmentCode})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* AI Summary */}
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Issue Summary
+                      </span>
+                      <p className="text-slate-600 leading-relaxed text-[11px]">
+                        {aiRecommendation.summary}
+                      </p>
+                    </div>
+
+                    {/* Suggested Maintenance Action */}
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg sm:col-span-2">
+                      <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-indigo-900">
+                        <Wrench className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Recommended Maintenance Action</span>
+                      </div>
+                      <p className="text-slate-700 leading-relaxed text-xs">
+                        {aiRecommendation.suggestedAction}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Accept or Dismiss Buttons */}
+                  <div className="flex items-center justify-between pt-1 border-t border-indigo-100">
+                    <button
+                      type="button"
+                      onClick={() => setAiRecommendation(null)}
+                      className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+
+                    <button
+                      type="button"
+                      id="btn-apply-all-ai"
+                      onClick={applyAllRecommendations}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Apply All Recommendations</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 6. Photo Attachments (Phase 5 Secure Cloudinary Upload) */}

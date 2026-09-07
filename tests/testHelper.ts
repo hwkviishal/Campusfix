@@ -13,6 +13,7 @@ import technicianRoutes from '../server/routes/technician.js';
 import adminRoutes from '../server/routes/admin.js';
 import notificationRoutes from '../server/routes/notifications.js';
 import commentRoutes from '../server/routes/comments.js';
+import aiRoutes from '../server/routes/ai.js';
 import { socketService } from '../server/services/socketService.js';
 import { Notification } from '../server/models/Notification.js';
 import { Comment } from '../server/models/Comment.js';
@@ -323,6 +324,88 @@ export async function setupPhase6Environment(): Promise<Phase6TestContext> {
     studentB,
     technicianA,
     technicianB,
+    admin,
+    cleanup,
+  };
+}
+
+export interface Phase7TestContext {
+  server: Server;
+  baseUrl: string;
+  student: IUser & { token: string };
+  technician: IUser & { token: string };
+  admin: IUser & { token: string };
+  cleanup: () => Promise<void>;
+}
+
+export async function setupPhase7Environment(): Promise<Phase7TestContext> {
+  await connectDB();
+
+  const app = express();
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(cookieParser());
+
+  app.use('/api/ai', aiRoutes);
+  app.use('/api/complaints', complaintRoutes);
+
+  const server = await new Promise<Server>((resolve) => {
+    const s = app.listen(0, '127.0.0.1', () => resolve(s));
+  });
+  const address = server.address() as any;
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+
+  await User.deleteMany({ email: { $regex: /@phase7\.campusfix$/ } });
+
+  let dept = await Department.findOne({ code: 'ELE' });
+  if (!dept) {
+    dept = await Department.create({
+      name: 'Electrical Maintenance',
+      code: 'ELE',
+      description: 'Handles electrical fixtures and issues',
+    });
+  }
+
+  const studentUser = await User.create({
+    name: 'Maya Student',
+    email: 'maya@phase7.campusfix',
+    password: 'Password123!',
+    role: 'STUDENT',
+  });
+  const techUser = await User.create({
+    name: 'Tim Technician',
+    email: 'tim@phase7.campusfix',
+    password: 'Password123!',
+    role: 'TECHNICIAN',
+    department: dept._id,
+  });
+  const adminUser = await User.create({
+    name: 'Ada Admin',
+    email: 'ada@phase7.campusfix',
+    password: 'Password123!',
+    role: 'ADMIN',
+  });
+
+  const student = Object.assign(studentUser, {
+    token: authService.generateToken({ userId: studentUser._id.toString(), role: 'STUDENT' }),
+  });
+  const technician = Object.assign(techUser, {
+    token: authService.generateToken({ userId: techUser._id.toString(), role: 'TECHNICIAN' }),
+  });
+  const admin = Object.assign(adminUser, {
+    token: authService.generateToken({ userId: adminUser._id.toString(), role: 'ADMIN' }),
+  });
+
+  const cleanup = async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await mongoose.disconnect();
+  };
+
+  return {
+    server,
+    baseUrl,
+    student,
+    technician,
     admin,
     cleanup,
   };

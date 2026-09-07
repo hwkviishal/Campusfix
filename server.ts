@@ -13,6 +13,7 @@ import adminRoutes from './server/routes/admin.js';
 import technicianRoutes from './server/routes/technician.js';
 import notificationRoutes from './server/routes/notifications.js';
 import commentRoutes from './server/routes/comments.js';
+import aiRoutes from './server/routes/ai.js';
 import { initSocketServer } from './server/services/socketService.js';
 import { seedInitialData } from './server/services/seedService.js';
 import { errorHandler } from './server/middleware/errorHandler.js';
@@ -45,6 +46,7 @@ async function startServer() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/technician', technicianRoutes);
   app.use('/api/notifications', notificationRoutes);
+  app.use('/api/ai', aiRoutes);
 
   // 404 for unhandled /api routes before Vite middleware
   app.all('/api/*', (req, res) => {
