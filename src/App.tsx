@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
+import { NotificationToast } from './components/NotificationToast';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -15,6 +17,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { AdminComplaintsPage } from './pages/AdminComplaintsPage';
 import { AdminComplaintDetailsPage } from './pages/AdminComplaintDetailsPage';
 import { AdminTechniciansPage } from './pages/AdminTechniciansPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { SystemConsole } from './pages/SystemConsole';
 import { RefreshCw } from 'lucide-react';
 
@@ -54,13 +57,25 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          {/* Public Auth Routes */}
-          <Route path="/" element={<RootIndex />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+        <SocketProvider>
+          <NotificationToast />
+          <Routes>
+            {/* Public Auth Routes */}
+            <Route path="/" element={<RootIndex />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-          {/* Protected Role-Aware Portals */}
+            {/* Notifications Activity History (All Authenticated Roles) */}
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute allowedRoles={['STUDENT', 'TECHNICIAN', 'ADMIN']}>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected Role-Aware Portals */}
           <Route
             path="/student"
             element={
@@ -167,7 +182,8 @@ export default function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+      </SocketProvider>
+    </AuthProvider>
+  </BrowserRouter>
   );
 }

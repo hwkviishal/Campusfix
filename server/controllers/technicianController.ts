@@ -8,6 +8,7 @@ import {
   deleteMultipleImagesFromCloudinary,
   UploadedImageResult,
 } from '../services/cloudinaryService.js';
+import { notificationService } from '../services/notificationService.js';
 
 /**
  * GET /api/technician/dashboard
@@ -274,6 +275,9 @@ export async function startTechnicianTask(
       .populate('department', 'name code contactEmail')
       .populate('statusHistory.changedBy', 'name email role');
 
+    // Notify student that work on complaint has started
+    await notificationService.notifyStatusChanged(populatedComplaint, 'ASSIGNED', 'IN_PROGRESS', technicianId);
+
     res.status(200).json({
       success: true,
       message: 'Task status updated to IN_PROGRESS. Work has commenced.',
@@ -420,6 +424,9 @@ export async function resolveTechnicianTask(
       .populate('assignedTo', 'name email role phone department')
       .populate('department', 'name code contactEmail')
       .populate('statusHistory.changedBy', 'name email role');
+
+    // Notify student and administrators that issue has been resolved
+    await notificationService.notifyComplaintResolved(populatedComplaint, technicianId);
 
     res.status(200).json({
       success: true,

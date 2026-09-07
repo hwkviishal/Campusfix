@@ -251,4 +251,73 @@ export const apiService = {
     const response = await apiClient.get('/system/upload-status');
     return response.data;
   },
+
+  // Phase 6 Notifications
+  getNotifications: async (params?: {
+    page?: number;
+    limit?: number;
+    unreadOnly?: boolean;
+  }): Promise<import('../types').NotificationsResponse> => {
+    const response = await apiClient.get<import('../types').NotificationsResponse>('/notifications', {
+      params,
+    });
+    return response.data;
+  },
+
+  getUnreadNotificationCount: async (): Promise<import('../types').UnreadCountResponse> => {
+    const response = await apiClient.get<import('../types').UnreadCountResponse>(
+      '/notifications/unread-count'
+    );
+    return response.data;
+  },
+
+  markNotificationAsRead: async (
+    id: string
+  ): Promise<{ success: boolean; data: { notification: import('../types').AppNotification } }> => {
+    const response = await apiClient.patch(`/notifications/${id}/read`);
+    return response.data;
+  },
+
+  markAllNotificationsAsRead: async (): Promise<{
+    success: boolean;
+    message: string;
+    data: { updatedCount: number };
+  }> => {
+    const response = await apiClient.patch('/notifications/read-all');
+    return response.data;
+  },
+
+  // Phase 6 Comments
+  getComplaintComments: async (
+    complaintId: string
+  ): Promise<import('../types').CommentsResponse> => {
+    const response = await apiClient.get<import('../types').CommentsResponse>(
+      `/complaints/${complaintId}/comments`
+    );
+    return response.data;
+  },
+
+  addComplaintComment: async (
+    complaintId: string,
+    data: { message: string; isInternal?: boolean }
+  ): Promise<{ success: boolean; data: { comment: import('../types').ComplaintComment } }> => {
+    const response = await apiClient.post(
+      `/complaints/${complaintId}/comments`,
+      data
+    );
+    return response.data;
+  },
+
+  // Admin status update
+  updateComplaintStatusAdmin: async (
+    complaintId: string,
+    status: string,
+    comment?: string
+  ): Promise<SingleComplaintResponse> => {
+    const response = await apiClient.patch<SingleComplaintResponse>(
+      `/admin/complaints/${complaintId}/status`,
+      { status, comment }
+    );
+    return response.data;
+  },
 };

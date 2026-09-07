@@ -10,6 +10,7 @@ import {
   deleteMultipleImagesFromCloudinary,
   UploadedImageResult,
 } from '../services/cloudinaryService.js';
+import { notificationService } from '../services/notificationService.js';
 
 const VALID_CATEGORIES: ComplaintCategory[] = [
   'ELECTRICAL',
@@ -211,6 +212,9 @@ export async function createComplaint(
     const populatedComplaint = await Complaint.findById(newComplaint._id)
       .populate('reportedBy', 'name email role')
       .populate('department', 'name code');
+
+    // Asynchronously notify student and active administrators (safe error handling)
+    await notificationService.notifyComplaintCreated(populatedComplaint);
 
     res.status(201).json({
       success: true,

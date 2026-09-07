@@ -12,6 +12,8 @@ import { StatusTimeline } from '../components/StatusTimeline';
 import { AssignTechnicianModal } from '../components/AssignTechnicianModal';
 import { UpdatePriorityModal } from '../components/UpdatePriorityModal';
 import { ImageGallery } from '../components/ImageGallery';
+import { CommentThread } from '../components/CommentThread';
+import { useSocket } from '../context/SocketContext';
 import {
   ArrowLeft,
   RefreshCw,
@@ -58,9 +60,20 @@ export const AdminComplaintDetailsPage: React.FC = () => {
     }
   };
 
+  const { onComplaintUpdated } = useSocket();
+
   useEffect(() => {
     fetchComplaint();
   }, [id]);
+
+  useEffect(() => {
+    const unsub = onComplaintUpdated((updated) => {
+      if (id && (updated._id === id || (updated as any).id === id)) {
+        setComplaint(updated);
+      }
+    });
+    return unsub;
+  }, [id, onComplaintUpdated]);
 
   const handleAssigned = (updated: Complaint) => {
     setComplaint(updated);
@@ -245,6 +258,9 @@ export const AdminComplaintDetailsPage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Real-time Communication & Internal Notes Thread */}
+            {id && <CommentThread complaintId={id} />}
 
             {/* Status History Audit Trail */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">

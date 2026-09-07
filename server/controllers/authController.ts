@@ -92,6 +92,7 @@ export const authController = {
         message: 'Registration successful',
         data: {
           user: user.toSafeObject(),
+          token,
         },
       });
     } catch (err: any) {
@@ -158,6 +159,7 @@ export const authController = {
         message: 'Login successful',
         data: {
           user: user.toSafeObject(),
+          token,
         },
       });
     } catch (err: any) {

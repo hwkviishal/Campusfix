@@ -4,6 +4,8 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { Complaint, ComplaintPriority, ComplaintStatus } from '../models/Complaint.js';
 import { User } from '../models/User.js';
 import { Department } from '../models/Department.js';
+import { notificationService } from '../services/notificationService.js';
+import { emitComplaintUpdated } from '../services/socketService.js';
 
 const VALID_PRIORITIES: ComplaintPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
@@ -366,6 +368,9 @@ export async function assignTechnician(
       .populate('department', 'name code contactEmail')
       .populate('statusHistory.changedBy', 'name email role');
 
+    // Notify student and assigned technician asynchronously
+    await notificationService.notifyComplaintAssigned(populatedComplaint, technician._id, adminId);
+
     res.status(200).json({
       success: true,
       message: `Complaint successfully assigned to technician ${technician.name}.`,
@@ -445,9 +450,92 @@ export async function updateComplaintPriority(
       .populate('department', 'name code contactEmail')
       .populate('statusHistory.changedBy', 'name email role');
 
+    await notificationService.notifyPriorityChanged(populatedComplaint, previousPriority, priority, adminId);
+
     res.status(200).json({
       success: true,
       message: `Priority updated to ${priority}.`,
+      data: {
+        complaint: populatedComplaint,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/admin/complaints/:id/status
+ * Admin updates complaint status (e.g., VERIFIED, CLOSED).
+ */
+export async function updateComplaintStatus(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { status, comment } = req.body;
+    const adminId = new mongoose.Types.ObjectId(req.user!.id);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid complaint ID format.',
+      });
+      return;
+    }
+
+    const validStatuses: ComplaintStatus[] = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'VERIFIED', 'CLOSED'];
+    if (!status || !validStatuses.includes(status)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid status. Allowed values: [${validStatuses.join(', ')}].`,
+      });
+      return;
+    }
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) {
+      res.status(404).json({
+        success: false,
+        message: 'Complaint not found.',
+      });
+      return;
+    }
+
+    const previousStatus = complaint.status;
+    if (previousStatus === status) {
+      res.status(200).json({
+        success: true,
+        message: `Status is already set to ${status}.`,
+        data: { complaint },
+      });
+      return;
+    }
+
+    complaint.status = status;
+    complaint.statusHistory.push({
+      status,
+      changedBy: adminId,
+      timestamp: new Date(),
+      comment: comment || `Status updated to ${status} by Administrator.`,
+    });
+
+    await complaint.save();
+
+    const populatedComplaint = await Complaint.findById(complaint._id)
+      .populate('reportedBy', 'name email role phone')
+      .populate('assignedTo', 'name email role phone department')
+      .populate('department', 'name code contactEmail')
+      .populate('statusHistory.changedBy', 'name email role');
+
+    // Trigger lifecycle notifications
+    await notificationService.notifyStatusChanged(populatedComplaint, previousStatus, status, adminId);
+
+    res.status(200).json({
+      success: true,
+      message: `Complaint status updated to ${status}.`,
       data: {
         complaint: populatedComplaint,
       },

@@ -7,6 +7,7 @@ import {
   getComplaintDetailsAdmin,
   assignTechnician,
   updateComplaintPriority,
+  updateComplaintStatus,
   getAllTechnicians,
 } from '../controllers/adminController.js';
 
@@ -23,6 +24,7 @@ router.get('/complaints', getAllComplaintsAdmin);
 router.get('/complaints/:id', getComplaintDetailsAdmin);
 router.patch('/complaints/:id/assign', assignTechnician);
 router.patch('/complaints/:id/priority', updateComplaintPriority);
+router.patch('/complaints/:id/status', updateComplaintStatus);
 
 // Technician Management
 router.get('/technicians', getAllTechnicians);

@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -10,6 +11,9 @@ import authRoutes from './server/routes/auth.js';
 import complaintRoutes from './server/routes/complaints.js';
 import adminRoutes from './server/routes/admin.js';
 import technicianRoutes from './server/routes/technician.js';
+import notificationRoutes from './server/routes/notifications.js';
+import commentRoutes from './server/routes/comments.js';
+import { initSocketServer } from './server/services/socketService.js';
 import { seedInitialData } from './server/services/seedService.js';
 import { errorHandler } from './server/middleware/errorHandler.js';
 
@@ -36,9 +40,11 @@ async function startServer() {
   // API Routes
   app.use('/api', healthRoutes);
   app.use('/api/auth', authRoutes);
+  app.use('/api/complaints', commentRoutes);
   app.use('/api/complaints', complaintRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/technician', technicianRoutes);
+  app.use('/api/notifications', notificationRoutes);
 
   // 404 for unhandled /api routes before Vite middleware
   app.all('/api/*', (req, res) => {
@@ -67,11 +73,16 @@ async function startServer() {
     });
   }
 
+  // Create unified HTTP server and attach Socket.IO
+  const httpServer = http.createServer(app);
+  initSocketServer(httpServer);
+
   // Bind to 0.0.0.0 and PORT 3000 as strictly required by container infrastructure
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  const server = httpServer.listen(PORT, '0.0.0.0', () => {
     const db = getDatabaseStatus();
     console.log(`====================================================`);
     console.log(` CampusFix Server running on http://0.0.0.0:${PORT}`);
+    console.log(` Socket.IO   : Active on ws://0.0.0.0:${PORT}`);
     console.log(` Environment : ${ENV.NODE_ENV}`);
     console.log(` MongoDB     : ${db.connected ? 'Connected (' + db.host + ' / ' + db.databaseName + ')' : 'Disconnected'}`);
     console.log(`====================================================`);

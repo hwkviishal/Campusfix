@@ -221,6 +221,13 @@ complaintSchema.index({ status: 1, createdAt: -1 });
 complaintSchema.index({ priority: 1, status: 1 });
 complaintSchema.index({ category: 1 });
 
+// Virtual relationship for associated comments (referencing Comment collection)
+complaintSchema.virtual('comments', {
+  ref: 'Comment',
+  localField: '_id',
+  foreignField: 'complaint',
+});
+
 // Ensure id virtual
 complaintSchema.set('toJSON', {
   virtuals: true,

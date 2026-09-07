@@ -11,6 +11,8 @@ import {
 import { StatusTimeline } from '../components/StatusTimeline';
 import { ResolveTaskModal } from '../components/ResolveTaskModal';
 import { ImageGallery } from '../components/ImageGallery';
+import { CommentThread } from '../components/CommentThread';
+import { useSocket } from '../context/SocketContext';
 import {
   ArrowLeft,
   RefreshCw,
@@ -55,9 +57,20 @@ export const TechnicianTaskDetailsPage: React.FC = () => {
     }
   };
 
+  const { onComplaintUpdated } = useSocket();
+
   useEffect(() => {
     fetchTask();
   }, [id]);
+
+  useEffect(() => {
+    const unsub = onComplaintUpdated((updated) => {
+      if (id && (updated._id === id || (updated as any).id === id)) {
+        setTask(updated);
+      }
+    });
+    return unsub;
+  }, [id, onComplaintUpdated]);
 
   const handleStartTask = async () => {
     if (!task) return;
@@ -311,6 +324,9 @@ export const TechnicianTaskDetailsPage: React.FC = () => {
                 </button>
               </div>
             )}
+
+            {/* Real-time Communication & Internal Notes Thread */}
+            {id && <CommentThread complaintId={id} />}
 
             {/* Transition Timeline */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">

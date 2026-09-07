@@ -4,6 +4,7 @@ import { apiService } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<User>;
@@ -16,6 +17,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('campusfix_jwt');
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState<boolean>(true);
 
   const refreshUser = useCallback(async (): Promise<User | null> => {
@@ -46,6 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiService.login(credentials);
       if (res.success && res.data?.user) {
         setUser(res.data.user);
+        const jwt = (res.data as any).token;
+        if (jwt) {
+          setToken(jwt);
+          try {
+            sessionStorage.setItem('campusfix_jwt', jwt);
+          } catch {}
+        }
         return res.data.user;
       }
       throw new Error(res.message || 'Login failed');
@@ -60,6 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiService.register(data);
       if (res.success && res.data?.user) {
         setUser(res.data.user);
+        const jwt = (res.data as any).token;
+        if (jwt) {
+          setToken(jwt);
+          try {
+            sessionStorage.setItem('campusfix_jwt', jwt);
+          } catch {}
+        }
         return res.data.user;
       }
       throw new Error(res.message || 'Registration failed');
@@ -76,6 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('Logout API error:', err);
     } finally {
       setUser(null);
+      setToken(null);
+      try {
+        sessionStorage.removeItem('campusfix_jwt');
+      } catch {}
       setLoading(false);
     }
   };
@@ -84,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        token,
         loading,
         isAuthenticated: !!user,
         login,

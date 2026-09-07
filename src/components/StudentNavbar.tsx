@@ -9,6 +9,7 @@ import {
   LogOut,
   Sliders,
 } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 export const StudentNavbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -88,6 +89,9 @@ export const StudentNavbar: React.FC = () => {
           <Sliders className="w-3.5 h-3.5" />
           <span>System Console</span>
         </Link>
+
+        {/* Real-time Notification Bell */}
+        <NotificationBell />
 
         <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200">
           <div className="flex items-center gap-2">

@@ -12,6 +12,7 @@ import {
   X,
   UserCheck,
 } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 interface TechnicianLayoutProps {
   children: React.ReactNode;
@@ -180,7 +181,10 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({
               <h1 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h1>
               {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
             </div>
-            {actions && <div className="flex items-center gap-2.5">{actions}</div>}
+            <div className="flex items-center gap-3">
+              <NotificationBell />
+              {actions && <div className="flex items-center gap-2.5">{actions}</div>}
+            </div>
           </div>
         </header>
 

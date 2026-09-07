@@ -15,6 +15,8 @@ import {
 } from '../components/ComplaintBadges';
 import { StatusTimeline } from '../components/StatusTimeline';
 import { ImageGallery } from '../components/ImageGallery';
+import { CommentThread } from '../components/CommentThread';
+import { useSocket } from '../context/SocketContext';
 import {
   ArrowLeft,
   Calendar,
@@ -117,9 +119,21 @@ export const ComplaintDetailsPage: React.FC = () => {
     }
   };
 
+  const { onComplaintUpdated } = useSocket();
+
   useEffect(() => {
     fetchComplaint();
   }, [id]);
+
+  // Listen for real-time complaint status/assignment updates
+  useEffect(() => {
+    const unsub = onComplaintUpdated((updated) => {
+      if (id && (updated._id === id || (updated as any).id === id)) {
+        setComplaint(updated);
+      }
+    });
+    return unsub;
+  }, [id, onComplaintUpdated]);
 
   // Handle Edit Submit
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -400,6 +414,9 @@ export const ComplaintDetailsPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Real-time Communication & Comments Thread */}
+            {id && <CommentThread complaintId={id} />}
 
             {/* Status History & Audit Log Card */}
             <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-6 sm:p-8">

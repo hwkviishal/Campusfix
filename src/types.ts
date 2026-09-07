@@ -318,3 +318,90 @@ export interface SystemStatusResponse {
     nextPhase: string;
   };
 }
+
+// Phase 6 Notification & Comment Types
+export type NotificationType =
+  | 'COMPLAINT_CREATED'
+  | 'COMPLAINT_ASSIGNED'
+  | 'STATUS_CHANGED'
+  | 'COMMENT_ADDED'
+  | 'COMPLAINT_RESOLVED'
+  | 'COMPLAINT_VERIFIED'
+  | 'COMPLAINT_CLOSED'
+  | 'PRIORITY_CHANGED'
+  | 'SYSTEM';
+
+export interface AppNotification {
+  _id: string;
+  id?: string;
+  recipient: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  relatedComplaint?: {
+    _id: string;
+    id?: string;
+    title: string;
+    status: ComplaintStatus;
+    priority: ComplaintPriority;
+    category: ComplaintCategory;
+    building: string;
+    room: string;
+  } | string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationsResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    notifications: AppNotification[];
+    unreadCount: number;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  };
+}
+
+export interface UnreadCountResponse {
+  success: boolean;
+  data: {
+    unreadCount: number;
+  };
+}
+
+export interface CommentAuthor {
+  _id: string;
+  id?: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  profileImage?: string;
+}
+
+export interface ComplaintComment {
+  _id: string;
+  id?: string;
+  complaint: string;
+  author: CommentAuthor;
+  message: string;
+  isInternal: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommentsResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    comments: ComplaintComment[];
+    count: number;
+  };
+}
+
